@@ -1,0 +1,32 @@
+###
+# @author Nicolae V. Cristea <cristea@enkas.tech>
+# Taskfile - https://taskfile.dev
+###
+version: '3'
+dotenv:
+  - ../.env.local # Highest priority
+  - ../.env
+
+vars:
+  Name: alpine
+  Alias: alpine
+  Create: ''
+  Systemd: --new -t 3
+  Service: '{{.CONT_PREFIX}}-{{.Alias}}.service'
+
+includes:
+  pm:
+    taskfile: ../taskfiles/podman.yml
+
+tasks:
+
+  build:
+    desc: Build image & create container
+    cmds:
+      - task: pm:build
+      - task: pm:push
+      - task: pm:create
+  up:
+    desc: Container start
+    cmds:
+      - task: pm:start

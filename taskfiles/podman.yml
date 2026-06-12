@@ -1,0 +1,110 @@
+###
+# Taskfile for podman commands
+# @author Nicolae V. Cristea <cristea@enkas.tech>
+###
+version: '3'
+
+vars:
+  Image: '{{.REGISTRY}}{{.PORT}}/{{.Name}}'
+
+tasks:
+
+  default:
+    desc: Overview containers
+    cmds:
+      - podman {{.CONN}} port -a
+      - task: ps
+        vars:
+          Opt: -s
+      - task: logs
+        vars:
+          Opt: --tail 3
+
+  build:
+    desc: Building {{.Image}}
+    cmds:
+      - podman {{.CONN}} build -t {{.Image}} ./
+
+  push:
+    prompt: "Pushing {{.Image}} ?"
+    cmds:
+      - podman {{.CONN}} push {{.NTLS}}{{.Image}}
+
+  create:
+    cmds:
+      - task: rm
+#      - podman {{.CONN}} pull {{.NTLS}}{{.Image}}
+      - podman {{.CONN}} create --name {{.Alias}} {{.Create}} {{.Image}}
+
+  systemd:
+    cmds:
+      - podman {{.CONN}} generate systemd -f --restart-policy=always {{.Systemd}} --container-prefix {{.CONT_PREFIX}} -n {{.Alias}}
+
+  sync:
+    desc: systemctl enable {{.Service}}
+    cmds:
+      - rsync -avzhe ssh -t --progress {{.Service}} {{.SERV}}:/etc/systemd/system/
+      - podman {{.CONN}} stop -i {{.Alias}}
+      - task: rsh
+        vars:
+          CmdList: [
+            "ls -la /etc/systemd/system/{{.Service}}",
+            "systemctl daemon-reload",
+            "systemctl enable {{.Service}}",
+            "systemctl start {{.Service}}"
+          ]
+
+  start:
+    cmds:
+      - podman {{.CONN}} start {{.Alias}}
+      - task: logs
+
+  ps:
+    desc: List containers {{.CONN}}
+    cmds:
+      - echo -e "${C2}{{.Image}}${NC}"
+      - podman {{.CONN}} ps {{.Opt}}
+    silent: true
+
+  logs:
+    cmds:
+      - podman {{.CONN}} logs {{.Alias}} {{.Opt}}
+
+  exec:
+    desc: Exec {{.Alias}} {{.CMD}}
+    cmds:
+      - podman {{.CONN}} exec -ti {{.Alias}} {{.CMD}}
+    vars:
+      CMD: '{{.Cmd | default "pwd"}}'
+
+  images:
+    desc: List images
+    cmds:
+      - | 
+        podman {{.CONN}} images --filter dangling=false --sort repository \
+        --format 'table {{"{{.ID}} {{.Repository}} {{.Tag}} {{.Created}} {{.Size}}"}}'
+
+  dangling:
+    desc: List dangling images
+    cmds:
+      - podman {{.CONN}} images --filter dangling=true
+
+  rm:
+    cmds:
+      - podman {{.CONN}} stop -i {{.Alias}}
+      - podman {{.CONN}} rm -ifv {{.Alias}}
+
+  rmi:
+    prompt: "Remove image {{.Image}} ?"
+    cmds:
+     - podman {{.CONN}} rmi -i {{.Alias}}
+     - podman {{.CONN}} image prune
+
+  rsh:
+    cmds:
+      - for: { var: CmdList }
+        cmd: ssh {{.SERV}} "{{.ITEM}}"
+
+#  podman_push:
+#    cmds:
+#      - read -p "podman push {{.NAME}}? (y/n):" push && [[ $push != [yY] ]] || podman push {{.NOTLS}} {{.Image}}

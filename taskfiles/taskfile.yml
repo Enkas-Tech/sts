@@ -1,0 +1,21 @@
+###
+# @author Nicolae V. Cristea <cristea@enkas.tech>
+# Taskfile - https://taskfile.dev
+###
+version: '3'
+
+vars:
+  GREETING: Hello, World!
+
+tasks:
+  default:
+    cmds:
+      - echo "{{.GREETING}}"
+      - ./bin/gott
+    silent: true
+
+  build:
+    cmds:
+      - go build -o bin/gott ./cmd
+      - chmod +x bin/gott && ls -la bin
+      - go-task
