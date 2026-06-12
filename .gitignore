@@ -2,3 +2,5 @@
 
 taskfiles/bin/*
 .env.local
+*.service
+*.pem

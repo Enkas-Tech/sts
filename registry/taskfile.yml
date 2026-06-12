@@ -4,13 +4,14 @@
 ###
 version: '3'
 dotenv:
-  - ../.env.local # Highest priority
+  - .env.local # Highest priority
   - ../.env
 
 vars:
-  Name: alpine
-  Alias: alpine
-  Create: ''
+  Name: registry
+  Alias: registry
+  Volume: data-{{.Alias}}
+  Create: -p 5000:5000 -v data-{{.Alias}}:/var/lib/registry:Z
   Systemd: -t 3
   Service: '{{.CONT_PREFIX}}-{{.Alias}}.service'
 
@@ -19,13 +20,23 @@ includes:
     taskfile: ../taskfiles/podman.yml
 
 tasks:
+  vol:
+    desc: "{{.Volume}}"
+    cmds:
+      - task: pm:volume-create
 
   build:
     desc: Build image & create container
     cmds:
       - task: pm:build
-      - task: pm:push
+      - task: pm:create-volume
       - task: pm:create
+  on:
+    desc: Enable service
+    prompt: "Enable systemd {{.Service}} ?"
+    cmds:
+      - task: pm:systemd
+      - task: pm:sync
   up:
     desc: Container start
     cmds:

@@ -26,14 +26,20 @@ tasks:
       - podman {{.CONN}} build -t {{.Image}} ./
 
   push:
-    prompt: "Pushing {{.Image}} ?"
+    prompt: "Pushing {{.NTLS}}{{.Image}} ?"
     cmds:
       - podman {{.CONN}} push {{.NTLS}}{{.Image}}
+#      - read -p "podman push {{.NAME}}? (y/n):" push && [[ $push != [yY] ]] || podman push {{.NOTLS}}{{.Image}}
+
+  pull:
+    cmd: podman {{.CONN}} pull {{.NTLS}}{{.Image}}
+
+  create-volume:
+    cmd: podman {{.CONN}} volume exists {{.Volume}} || podman {{.CONN}} volume create {{.Volume}}
 
   create:
     cmds:
       - task: rm
-#      - podman {{.CONN}} pull {{.NTLS}}{{.Image}}
       - podman {{.CONN}} create --name {{.Alias}} {{.Create}} {{.Image}}
 
   systemd:
@@ -89,9 +95,25 @@ tasks:
     cmds:
       - podman {{.CONN}} images --filter dangling=true
 
+  volume:
+    desc: Volumes {{.Opt}}
+    cmds:
+      - podman {{.CONN}} volume {{.Opt}}
+    vars:
+      Opt: '{{.Opt | default "ls"}}'
+
+  stop:
+    cmds:
+      - task: rsh
+        vars:
+          CmdList: [
+            "systemctl stop {{.Service}}"
+          ]
+      - podman {{.CONN}} stop -i {{.Alias}}
+
   rm:
     cmds:
-      - podman {{.CONN}} stop -i {{.Alias}}
+      - task: stop
       - podman {{.CONN}} rm -ifv {{.Alias}}
 
   rmi:
@@ -104,7 +126,3 @@ tasks:
     cmds:
       - for: { var: CmdList }
         cmd: ssh {{.SERV}} "{{.ITEM}}"
-
-#  podman_push:
-#    cmds:
-#      - read -p "podman push {{.NAME}}? (y/n):" push && [[ $push != [yY] ]] || podman push {{.NOTLS}} {{.Image}}
