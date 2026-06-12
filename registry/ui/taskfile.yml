@@ -1,0 +1,37 @@
+###
+# @author Nicolae V. Cristea <cristea@enkas.tech>
+# Taskfile - https://taskfile.dev
+###
+version: '3'
+dotenv:
+  - ../../.env.local # Highest priority
+  - ../../.env
+
+vars:
+  Name: registry:ui
+  Alias: registry-ui
+  Create: -p 8000:8000
+  Systemd: -t 3
+  Service: '{{.CONT_PREFIX}}-{{.Alias}}.service'
+
+includes:
+  pm:
+    taskfile: ../../taskfiles/podman.yml
+
+tasks:
+  build:
+    desc: Build image & create container
+    cmds:
+      - task: pm:build
+      - task: pm:push
+      - task: pm:create
+  up:
+    desc: Container start
+    cmds:
+      - task: pm:start
+  on:
+    desc: Enable service
+    prompt: "Enable systemd {{.Service}} ?"
+    cmds:
+      - task: pm:systemd
+      - task: pm:sync
