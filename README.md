@@ -1,0 +1,2 @@
+# sts
+Static Services
